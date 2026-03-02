@@ -109,6 +109,9 @@ class TrainConfig(BaseConfig):
     wandb_ename: str | None = None
     wandb_gname: str | None = None
     wandb_pname: str | None = None
+    # How often (in env steps) to log lightweight progress (env_steps, buffer_size, FPS, etc.)
+    # This is independent of log_every_updates which only fires after agent updates are available.
+    wandb_log_step_interval: int = 10_000
 
     # misc
     load_isaac_expert_data: bool = True
@@ -325,6 +328,8 @@ class Workspace:
         eval_time_checker = EveryNStepsChecker(self._checkpoint_time, self.cfg.eval_every_steps)
         update_agent_time_checker = EveryNStepsChecker(self._checkpoint_time, self.cfg.update_agent_every)
         log_time_checker = EveryNStepsChecker(self._checkpoint_time, self.cfg.log_every_updates)
+        progress_log_checker = EveryNStepsChecker(self._checkpoint_time, self.cfg.wandb_log_step_interval)
+        progress_step_time = time.time()
 
         eval_instances = []
         for evaluation_name in self.evaluations.keys():
@@ -522,6 +527,23 @@ class Workspace:
                 m_dict["timestep"] = t
                 self.train_logger.log(m_dict)
 
+            # Lightweight progress log (env steps, buffer size, FPS) — fires much more frequently
+            if progress_log_checker.check(t):
+                progress_log_checker.update_last_step(t)
+                elapsed_since_progress = time.time() - progress_step_time
+                progress_fps = (self.cfg.wandb_log_step_interval / elapsed_since_progress) if elapsed_since_progress > 0 else 0
+                progress_dict = {
+                    "env_steps": t,
+                    "buffer_size": len(replay_buffer["train"]),
+                    "elapsed_minutes": (time.time() - start_time) / 60,
+                    "rollout_FPS": round(progress_fps, 1),
+                }
+                if self.cfg.use_wandb:
+                    wandb.log({f"progress/{k}": v for k, v in progress_dict.items()}, step=t)
+                print(f"[progress] step={t}, buffer={progress_dict['buffer_size']}, "
+                      f"elapsed={progress_dict['elapsed_minutes']:.1f}min, FPS={progress_dict['rollout_FPS']}")
+                progress_step_time = time.time()
+
             progb.update(self.cfg.online_parallel_envs)
             td = new_td
             terminated = new_terminated
@@ -585,6 +607,7 @@ class Workspace:
 
 
 def train_bfm_zero():
+    from datetime import datetime
     from humanoidverse.agents.fb_cpr_aux.model import FBcprAuxModelArchiConfig, FBcprAuxModelConfig
     from humanoidverse.agents.fb_cpr_aux.agent import FBcprAuxAgentTrainConfig
     from humanoidverse.agents.nn_models import ForwardArchiConfig, BackwardArchiConfig, ActorArchiConfig, DiscriminatorArchiConfig, RewardNormalizerConfig
@@ -689,7 +712,7 @@ def train_bfm_zero():
             make_config_g1env_compatible=False,
             root_height_obs=True
         ),
-        work_dir='results/bfmzero-isaac',
+        work_dir=f'results/bfmzero-isaac_{datetime.now().strftime("%Y%m%d_%H%M%S")}',
         seed=4728,
         online_parallel_envs=1024,
         log_every_updates=384000,
@@ -706,10 +729,11 @@ def train_bfm_zero():
         prioritization_mode='exp',
         use_trajectory_buffer=True,
         buffer_size=5120000,
-        use_wandb=False,
-        wandb_ename='yitangl',  # your wandb entity (username/team), empty = default from wandb login
+        use_wandb=True,
+        wandb_ename='',  # your wandb entity (username/team), empty = default from wandb login
         wandb_gname='bfmzero-isaac',  # run group
         wandb_pname='bfmzero-isaac',  # your wandb project name
+        wandb_log_step_interval=10240,  # log progress every ~10k env steps (10 iterations with 1024 envs)
         load_isaac_expert_data=True,
         buffer_device='cuda',
         disable_tqdm=True,

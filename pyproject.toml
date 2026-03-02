@@ -7,7 +7,7 @@ name = "motivo-isaac"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = "==3.10.*"
+requires-python = "==3.11.*"
 dependencies = [
     "easydict>=1.13",
     "exca>=0.2.5",
@@ -15,8 +15,8 @@ dependencies = [
     "huggingface-hub>=0.30.2",
     "humenv",
     "hydra-core>=1.2.0",
-    "isaaclab[all,isaacsim]==2.0.2; sys_platform == 'linux'",
-    "isaacsim[all,extscache]==4.5.0; sys_platform == 'linux'",
+    "isaaclab[all,isaacsim]==2.3.2.post1; sys_platform == 'linux'",
+    "isaacsim[all,extscache]==5.1.0; sys_platform == 'linux'",
     "joblib>=1.4.2",
     "loguru>=0.7.3",
     "lxml>=5.3.2",
@@ -34,13 +34,19 @@ dependencies = [
     "safetensors>=0.5.3",
     "tensordict>=0.8.3",
     "termcolor>=3.0.1",
-    "torch>=2.5.0",
-    "tyro>=0.9.18",
+    "torch==2.7.0",
+    "tyro",
     "xxhash>=3.5.0",
+    "wandb",
 ]
 
 [[tool.uv.index]]
 url = "https://pypi.nvidia.com/"
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
 
 # [project.optional-dependencies]
 # sim2real = [
@@ -54,6 +60,10 @@ url = "https://pypi.nvidia.com/"
 # unitree-sdk2py = { path = "unitree_sdk2_python", editable = true }
 humenv = { git = "https://github.com/facebookresearch/humenv.git" }
 
+torch = { index = "pytorch-cu128" }
+torchvision = { index = "pytorch-cu128" }
+torchaudio = { index = "pytorch-cu128" }
+
 [tool.setuptools]
 include-package-data = true
 
@@ -64,10 +74,10 @@ humanoidverse = ["config/**/*", "data/**/*"]
 include = ["humanoidverse*"]
 
 [tool.uv]
-dev-dependencies = [
-    "ruff==0.9.6",
-]
 index-strategy = "unsafe-best-match"
+
+[dependency-groups]
+dev = ["ruff==0.9.6"]
 
 [tool.ruff]
 line-length = 140

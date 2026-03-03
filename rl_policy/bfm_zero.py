@@ -38,7 +38,7 @@ class BFMZeroPolicy:
         robot_type = robot_config["ROBOT_TYPE"]
         if robot_type == "g1_real":
             # example: sys.path.append("/home/unitree/User/unitree_sdk2/build/lib")
-            sys.path.append("/path/to/your/unitree_sdk2/build/lib")
+            sys.path.append("/home/unitree/Coding/unitree_sdk2_pybind/build/lib")
             import g1_interface
             network_interface = robot_config.get("INTERFACE", None)
             self.robot = g1_interface.G1Interface(network_interface)
@@ -248,7 +248,19 @@ class BFMZeroPolicy:
         # load onnx policy
         import onnxruntime
         logger.info(f"Loading onnx policy from {model_path}")
-        self.onnx_policy_session = onnxruntime.InferenceSession(model_path)
+
+        available_providers = onnxruntime.get_available_providers()
+        if "CUDAExecutionProvider" in available_providers:  # 100hz on NX 16Gb
+            providers = ["CUDAExecutionProvider", "CPUExecutionProvider"]
+            logger.info("Using CUDAExecutionProvider for ONNX inference")
+        else:
+            providers = ["CPUExecutionProvider"]  # not stable on NX
+            logger.warning("CUDAExecutionProvider not available, falling back to CPUExecutionProvider")
+
+        self.onnx_policy_session = onnxruntime.InferenceSession(
+            model_path,
+            providers=providers,
+        )
         self.onnx_input_name = self.onnx_policy_session.get_inputs()[0].name
         self.onnx_output_name = self.onnx_policy_session.get_outputs()[0].name
 

@@ -4,7 +4,7 @@ MODEL_ONNX_PATH=./model/exported/FBcprAuxModel.onnx
 TASK=config/exp/goal/goal.yaml
 
 python rl_policy/bfm_zero.py \
-    --robot_config config/robot/g1.yaml \
+    --robot_config config/robot/g1_real.yaml \
     --policy_config ${POLICY_CONFIG} \
     --model_path ${MODEL_ONNX_PATH} \
     --task  ${TASK}

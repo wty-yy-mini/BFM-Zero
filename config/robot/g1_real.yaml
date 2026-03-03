@@ -3,7 +3,7 @@ ROBOT_TYPE: 'g1_real' # Robot name, "go2", "b2", "b2w", "h1", "go2w", "g1"
 ## SIM
 DOMAIN_ID: 0 # Domain id
 # Interface
-INTERFACE: "eth0"   # "eth1"   
+INTERFACE: "enP8p1s0"  
 USE_JOYSTICK: True
 
 
@@ -13,7 +13,7 @@ UNITREE_LEGGED_CONST:
   TRIGERLEVEL: 0xF0
   PosStopF: 2146000000.0
   VelStopF: 16000.0
-  MODE_MACHINE: 5
+  MODE_MACHINE: 15
   MODE_PR:  0
 
 

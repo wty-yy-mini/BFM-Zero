@@ -2,8 +2,8 @@ mujoco
 loguru
 pyyaml
 scipy
-torch
-onnxruntime
+# torch
+# onnxruntime-gpu
 pynput
 ipdb
 termcolor

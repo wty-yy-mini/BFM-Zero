@@ -1,0 +1,21 @@
+[project]
+name = "bfm-zero"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = "==3.10"
+dependencies = [
+    "huggingface-hub>=1.5.0",
+    "ipdb>=0.13.13",
+    "joblib>=1.5.3",
+    "loguru>=0.7.3",
+    "mujoco>=3.5.0",
+    "pygame>=2.6.1",
+    "pynput>=1.8.1",
+    "pyyaml>=6.0.3",
+    "scipy>=1.15.3",
+    "sshkeyboard>=2.3.1",
+    "termcolor>=3.3.0",
+    "zmq>=0.0.0",
+    "numpy<2.0.0",
+]

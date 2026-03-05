@@ -1,4 +1,7 @@
 # UPDATE
+## 20260305
+完成62h训练[wandb曲线图](https://wandb.ai/yy1695651/bfmzero-isaac/runs/xaln7qml)，35h达到86.4M训练步数时候就emd已经达到0.75以下了，最低emd为134M时候的0.737，平均FPS为682
+
 ## 20260303 v0.1
 在G1 NX 16Gb上运行，修改相应参数并将onnxruntime设置为cuda推理，速度还是太慢，无法使用，后续需要迁移到CPP版本。
 

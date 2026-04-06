@@ -209,6 +209,8 @@ class DictBuffer:
             loaded_config = json.load(f)
         if "__target__" in loaded_config:
             del loaded_config["__target__"]
+        if device is not None:
+            loaded_config["device"] = device
         # Old buffers might not have these values
         _idx = None
         _is_full = None

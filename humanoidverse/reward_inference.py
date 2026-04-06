@@ -7,6 +7,7 @@ from pathlib import Path
 import json
 import torch
 import joblib
+import numpy as np
 import mediapy as media
 import rich
 import warnings
@@ -22,6 +23,7 @@ from humanoidverse.agents.buffers.transition import DictBuffer
 from humanoidverse.envs.g1_env_helper.bench import RewardEvaluationHV, RewardWrapperHV
 from humanoidverse.utils.helpers import export_meta_policy_as_onnx
 from humanoidverse.utils.helpers import get_backward_observation
+from humanoidverse.utils.latent_export import save_latent_npz
 
 # Resolve humanoidverse root directory
 if getattr(humanoidverse, "__file__", None) is not None:
@@ -29,7 +31,69 @@ if getattr(humanoidverse, "__file__", None) is not None:
 else:
     HUMANOIDVERSE_DIR = Path(__file__).parent.parent.parent
 
-def main(model_folder: Path, data_path: Path | None = None, headless: bool = True, device="cuda", simulator: str = "isaacsim", save_mp4: bool=False, episode_length: int=500, video_folder: str | None = None, disable_dr: bool = False, disable_obs_noise: bool = False, num_samples: int = 150_000, n_inferences: int = 1, skip_rollouts: bool = False):
+
+def _load_existing_z_dict(pkl_path: Path) -> dict[str, list[torch.Tensor]]:
+    if not pkl_path.exists():
+        return {}
+
+    loaded = joblib.load(pkl_path)
+    if not isinstance(loaded, Mapping):
+        return {}
+
+    z_dict: dict[str, list[torch.Tensor]] = {}
+    for key, value in loaded.items():
+        if isinstance(value, list):
+            z_dict[key] = [item.cpu() if hasattr(item, "cpu") else torch.as_tensor(item) for item in value]
+        else:
+            z_dict[key] = [value.cpu() if hasattr(value, "cpu") else torch.as_tensor(value)]
+    return z_dict
+
+
+def _load_existing_z_dict_from_npz(npz_path: Path) -> dict[str, list[torch.Tensor]]:
+    if not npz_path.exists():
+        return {}
+
+    z_dict: dict[str, list[torch.Tensor]] = {}
+    with np.load(npz_path) as data:
+        for key in data.files:
+            z_dict[key] = [torch.from_numpy(data[key])]
+    return z_dict
+
+
+def _load_existing_task_names(npz_path: Path, txt_path: Path) -> set[str]:
+    if npz_path.exists():
+        with np.load(npz_path) as data:
+            return set(data.files)
+
+    if txt_path.exists():
+        task_names: set[str] = set()
+        with txt_path.open("r") as f:
+            for line in f:
+                stripped = line.strip()
+                if not stripped.startswith("  ") and not line.startswith("  "):
+                    continue
+                key, sep, _ = stripped.partition(":")
+                if sep:
+                    task_names.add(key)
+        return task_names
+
+    return set()
+
+def main(
+    model_folder: Path,
+    data_path: Path | None = None,
+    headless: bool = True,
+    device="cuda",
+    simulator: str = "isaacsim",
+    save_mp4: bool=False,
+    episode_length: int=500,
+    video_folder: str | None = None,
+    disable_dr: bool = False,
+    disable_obs_noise: bool = False,
+    num_samples: int = 150_000,
+    n_inferences: int = 1,
+    skip_rollouts: bool = True
+):
     model_folder = Path(model_folder)
     video_folder = Path(video_folder) if video_folder is not None else model_folder / "reward_inference" / "videos"
     video_folder.mkdir(parents=True, exist_ok=True)
@@ -74,8 +138,8 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
     print(f"Exported model to {output_dir}/{model_name}.onnx")
     tasks = [
         # stand
-        "move-ego-0-0",
-        "move-ego-low0.5-0-0",
+        # "move-ego-0-0",
+        # "move-ego-low0.5-0-0",
 
         # locomotion medium
         "move-ego-0-0.7",
@@ -87,9 +151,9 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
 
         # locomotion slow
         "move-ego-0-0.3",
-        "move-ego-90-0.3",
-        "move-ego-180-0.3",
-        "move-ego--90-0.3",
+        # "move-ego-90-0.3",
+        # "move-ego-180-0.3",
+        # "move-ego--90-0.3",
         
         # locomotion fast
         # "move-ego-0-1",
@@ -98,48 +162,50 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
         # "move-ego--90-1",
 
         # spin
-        "rotate-z-5-0.5",
-        "rotate-z--5-0.5",
+        # "rotate-z-1-0.5",
+        # "rotate-z-2-0.5",
+        # "rotate-z--1-0.5",
+        # "rotate-z--2-0.5",
     
         # raise arms
-        "raisearms-l-l",
-        "raisearms-l-m",
-        "raisearms-m-l",
-        "raisearms-m-m",
+        # "raisearms-l-l",
+        # "raisearms-l-m",
+        # "raisearms-m-l",
+        # "raisearms-m-m",
 
 
-        # move + arms
-        "move-arms-0-0.7-m-m",
-        "move-arms-90-0.7-m-m",
-        "move-arms-180-0.4-m-m",
-        "move-arms--90-0.7-m-m",
-        "move-arms-0-0.7-l-m",
-        "move-arms-90-0.7-l-m",
-        "move-arms-180-0.4-l-m",
-        "move-arms--90-0.7-l-m",
-        "move-arms-0-0.7-m-l",
-        "move-arms-90-0.7-m-l",
-        "move-arms-180-0.4-m-l",
-        "move-arms--90-0.7-m-l",
-        "move-arms-0-0.7-l-l",
-        "move-arms-90-0.7-l-l",
-        "move-arms-180-0.4-l-l",
-        "move-arms--90-0.7-l-l",
+        # # move + arms
+        # "move-arms-0-0.7-m-m",
+        # "move-arms-90-0.7-m-m",
+        # "move-arms-180-0.4-m-m",
+        # "move-arms--90-0.7-m-m",
+        # "move-arms-0-0.7-l-m",
+        # "move-arms-90-0.7-l-m",
+        # "move-arms-180-0.4-l-m",
+        # "move-arms--90-0.7-l-m",
+        # "move-arms-0-0.7-m-l",
+        # "move-arms-90-0.7-m-l",
+        # "move-arms-180-0.4-m-l",
+        # "move-arms--90-0.7-m-l",
+        # "move-arms-0-0.7-l-l",
+        # "move-arms-90-0.7-l-l",
+        # "move-arms-180-0.4-l-l",
+        # "move-arms--90-0.7-l-l",
 
-        # spin + arms
-        "spin-arms-5-l-l",
-        "spin-arms--5-l-l",
-        "spin-arms-5-l-m",
-        "spin-arms--5-l-m",
-        # "spin-arms-5-m-m",
-        # "spin-arms--5-m-m",
-        "spin-arms-5-m-l",
-        "spin-arms--5-m-l",
+        # # spin + arms
+        # "spin-arms-5-l-l",
+        # "spin-arms--5-l-l",
+        # "spin-arms-5-l-m",
+        # "spin-arms--5-l-m",
+        # # "spin-arms-5-m-m",
+        # # "spin-arms--5-m-m",
+        # "spin-arms-5-m-l",
+        # "spin-arms--5-m-l",
 
-        # sit
-        "crouch-0",
-        "crouch-0.25",
-        "sitonground",
+        # # sit
+        # "crouch-0",
+        # "crouch-0.25",
+        # "sitonground",
     ]
 
     print("Loading the replay buffer...", end=" ", flush=True)
@@ -166,20 +232,34 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
         process_executor=True,
         env_model=str(HUMANOIDVERSE_DIR / "data" / "robots" / "g1" / "scene_29dof_freebase_noadditional_actuators.xml"),
     )
-    z_dict = {}
+    path = model_folder / "reward_inference"
+    path.mkdir(exist_ok=True)
+    pkl_path = path / "reward_locomotion.pkl"
+    npz_path = path / "reward_locomotion.npz"
+    txt_path = npz_path.with_suffix(".txt")
+
+    z_dict = _load_existing_z_dict(pkl_path)
+    if not z_dict:
+        z_dict = _load_existing_z_dict_from_npz(npz_path)
+    existing_task_names = set(z_dict.keys()) if z_dict else _load_existing_task_names(npz_path, txt_path)
+
     for r in range(n_inferences):
         for task in tasks:
+            if task in existing_task_names:
+                print(f"Skipping inference for {task}: already present in existing reward files")
+                continue
             print(f"Started inference for {task}...", end=" ", flush=True)
             start_t = time.time()
             z = reward_eval_agent.reward_inference(task=task)
             z_dict[task] = z_dict.get(task, []) + [z.cpu()]
+            existing_task_names.add(task)
             print(f"done in {time.time()-start_t}s")
 
-            path = model_folder / "reward_inference"
-            path.mkdir(exist_ok=True)
-            with open(os.path.join(path, "reward_locomotion.pkl"), "wb") as f:
+            with open(pkl_path, "wb") as f:
                 joblib.dump(z_dict, f)
-            print(f"Saved file at {path}/reward_locomotion.pkl")
+            save_latent_npz(z_dict, npz_path)
+            print(f"Saved file at {pkl_path}")
+            print(f"Saved file at {npz_path}")
 
     # z_dict = joblib.load(model_folder / "reward_inference/reward_locomotion.pkl")
 

@@ -10,6 +10,7 @@ from humanoidverse.agents.envs.humanoidverse_isaac import HumanoidVerseIsaacConf
 import torch
 from humanoidverse.utils.helpers import export_meta_policy_as_onnx
 from humanoidverse.utils.helpers import get_backward_observation
+from humanoidverse.utils.latent_export import save_latent_npz
 import joblib
 import mediapy as media
 import numpy as np
@@ -83,6 +84,7 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
     print("-"*80)
     
     output_dir = model_folder / "tracking_inference"
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     for MOTION_ID in motion_list:
         env.set_is_evaluating(MOTION_ID)
@@ -98,8 +100,13 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
         # import ipdb; ipdb.set_trace()
 
         z = tracking_inference(tree_map(lambda x: x[1:], obs))
-        joblib.dump(z.cpu().numpy(), output_dir / f"zs_{MOTION_ID}.pkl")
-        print(f"Saved zs_{MOTION_ID}.pkl")
+        z_numpy = z.cpu().numpy()
+        pkl_path = output_dir / f"zs_{MOTION_ID}.pkl"
+        npz_path = output_dir / f"zs_{MOTION_ID}.npz"
+        joblib.dump(z_numpy, pkl_path)
+        save_latent_npz({"data": z_numpy}, npz_path)
+        print(f"Saved {pkl_path.name}")
+        print(f"Saved {npz_path.name}")
         
     observation, info = wrapped_env.reset(to_numpy=False)
 

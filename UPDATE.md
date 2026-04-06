@@ -1,5 +1,8 @@
 # UPDATE
 
+## 20260406 v0.2
+1. 修改模型导出配置
+
 ## 20260306 v0.1
 
 训练配置切换为使用 `robot=g1/g1_29dof_mode15`，这个配置和unitree_rl_lab完全一致，并且符合mode15的hip.{pitch, roll}齿轮比均为22.5的要求（原来使用的hard_waist锁腰的版本，可能和腰部剧烈震荡有关）

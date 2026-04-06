@@ -16,6 +16,7 @@ from humanoidverse.agents.load_utils import load_model_from_checkpoint_dir
 from humanoidverse.agents.envs.humanoidverse_isaac import HumanoidVerseIsaacConfig, IsaacRendererWithMuJoco
 from humanoidverse.utils.helpers import export_meta_policy_as_onnx
 from humanoidverse.utils.helpers import get_backward_observation
+from humanoidverse.utils.latent_export import save_latent_npz
 
 # Resolve humanoidverse root directory
 if getattr(humanoidverse, "__file__", None) is not None:
@@ -24,7 +25,18 @@ else:
     HUMANOIDVERSE_DIR = Path(__file__).parent.parent.parent
 
 
-def main(model_folder: Path, data_path: Path | None = None, headless: bool = True, device="cuda", simulator: str = "isaacsim", save_mp4: bool=False, disable_dr: bool = False, disable_obs_noise: bool = False, episode_len: int = 500, video_folder: str | None = None):
+def main(
+    model_folder: Path,
+    data_path: Path = HUMANOIDVERSE_DIR / "data" / "lafan_29dof.pkl",
+    headless: bool = True,
+    device="cuda",
+    simulator: str = "isaacsim",
+    save_mp4: bool=False,
+    disable_dr: bool = False,
+    disable_obs_noise: bool = False,
+    episode_len: int = 500,
+    video_folder: str | None = None
+):
 
     model_folder = Path(model_folder)
     video_folder = Path(video_folder) if video_folder is not None else model_folder / "goal_inference" / "videos"
@@ -113,8 +125,13 @@ def main(model_folder: Path, data_path: Path | None = None, headless: bool = Tru
                 z_dict[goal_name] = model.goal_inference(goal_observation).cpu().numpy()
     path = model_folder / "goal_inference"
     path.mkdir(exist_ok=True)
-    with open(os.path.join(path, "goal_reaching.pkl"), "wb") as f:
+    pkl_path = path / "goal_reaching.pkl"
+    npz_path = path / "goal_reaching.npz"
+    with open(pkl_path, "wb") as f:
         joblib.dump(z_dict, f)
+    save_latent_npz(z_dict, npz_path)
+    print(f"Saved {pkl_path}")
+    print(f"Saved {npz_path}")
 
     if save_mp4:
         rgb_renderer = IsaacRendererWithMuJoco(render_size=256)

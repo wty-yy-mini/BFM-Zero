@@ -25,7 +25,6 @@ from pathlib import Path
 from typing import Dict, List
 from torch.utils._pytree import tree_map
 
-import exca as xk
 import gymnasium
 import numpy as np
 import pydantic
@@ -125,9 +124,6 @@ class TrainConfig(BaseConfig):
     eval_every_steps: int = 1_000_000
 
     tags: dict = pydantic.Field(default_factory=lambda: {})
-
-    # exca
-    infra: xk.TaskInfra = xk.TaskInfra(version="1")
 
     def model_post_init(self, context):
         # TODO prioritization needs tracking eval to work, but this is bit hacky to check for it

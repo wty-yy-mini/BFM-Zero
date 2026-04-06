@@ -2,6 +2,8 @@
 
 ## 20260406 v0.2
 1. 修改模型导出配置
+2. 删除train.py中的exca超参数配置包，避免报错
+3. 加入使用IsaacLab镜像的快速安装方法 [train_notify.md](./docs/train_notify.md)
 
 ## 20260306 v0.1
 

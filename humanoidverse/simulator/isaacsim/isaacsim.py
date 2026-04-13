@@ -440,9 +440,16 @@ class IsaacSim(BaseSimulator):
             self.setup_rendering_cameras()
         
     def setup_keyboard(self):
-        # TODO: add back
+        # Isaac Lab API changed: Se2Keyboard now requires a cfg object.
         from isaaclab.devices.keyboard.se2_keyboard import Se2Keyboard
-        self.keyboard_interface = Se2Keyboard()
+        import inspect
+
+        init_sig = inspect.signature(Se2Keyboard.__init__)
+        if "cfg" in init_sig.parameters:
+            from isaaclab.devices.keyboard.se2_keyboard import Se2KeyboardCfg
+            self.keyboard_interface = Se2Keyboard(Se2KeyboardCfg(sim_device=self.sim_device))
+        else:
+            self.keyboard_interface = Se2Keyboard()
         
     def add_keyboard_callback(self, key, callback):
         # TODO: add back

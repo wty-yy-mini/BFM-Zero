@@ -1,5 +1,8 @@
 # UPDATE
 
+## 20260412 v0.2.1
+1. 更新模型导出代码及使用说明, 参考[export_notify.md](./docs/export_notify.md)
+
 ## 20260406 v0.2
 1. 修改模型导出配置
 2. 删除train.py中的exca超参数配置包，避免报错

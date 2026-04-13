@@ -23,7 +23,17 @@ else:
     HUMANOIDVERSE_DIR = Path(__file__).resolve().parent
 
 
-def main(model_folder: Path, data_path: Path | None = None, headless: bool = True, device="cuda", simulator: str = "isaacsim", save_mp4: bool=False, disable_dr: bool = False, disable_obs_noise: bool = False, motion_list: list[int] = [25]):
+def main(
+        model_folder: Path,
+        data_path: Path | None = None,
+        headless: bool = True,
+        device: str = "cuda",
+        simulator: str = "isaacsim",
+        save_mp4: bool=False,
+        disable_dr: bool = False,
+        disable_obs_noise: bool = False,
+        motion_list: list[int] = [0]
+    ):
     # motion_list: motion ids to evaluate (default [25])
     
     model_folder = Path(model_folder)
